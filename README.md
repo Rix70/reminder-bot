@@ -34,21 +34,13 @@
     cd reminder-bot
     ```
 
-2. **Создание виртуального окружения:**
-
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate  # Для Unix или MacOS
-    venv\Scripts\activate     # Для Windows
-    ```
-
-3. **Установка зависимостей:**
+2. **Установка зависимостей:**
 
     ```bash
     pip install -r requirements.txt
     ```
 
-4. **Настройка конфигурации:**
+3. **Настройка конфигурации:**
 
     - Откройте файл `config.py` и введите ваш `TELEGRAM_TOKEN` и `OWNER_ID`.
 
@@ -56,26 +48,25 @@
     # config.py
 
     TELEGRAM_TOKEN = 'ВАШ_TELEGRAM_TOKEN'
-    OWNER_ID = 'ВАШ_OWNER_ID'
     ```
 
-5. **Инициализация базы данных:**
+4. **Инициализация базы данных:**
 
     База данных будет автоматически создана при первом запуске бота. Убедитесь, что у вас есть права на запись в директорию проекта.
 
-6. **Запуск бота:**
+5. **Запуск бота:**
 
     ```bash
-    python main.py
+    python3 main.py
     ```
 
     После запуска бот начнет работать и будет доступен в Telegram по вашему токену.
 
-### Автоматическая установка (одной командой)
+### Автоматический запуск
 Скопируйте и вставьте следующую команду в терминал, находясь в директории проекта:
 
 ```bash
-sudo bash -c 'cat > /etc/systemd/system/reminder-bot.service << EOL
+tee <<EOF > /dev/null /etc/systemd/system/reminder-bot.service
 [Unit]
 Description=Telegram Reminder Bot
 After=network.target
@@ -85,17 +76,18 @@ Type=simple
 User=$USER
 Group=$USER
 WorkingDirectory='$(pwd)'
-ExecStart='$(pwd)'/venv/bin/python '$(pwd)'/main.py
+ExecStart='$(pwd)'/venv/bin/python3 '$(pwd)'/main.py
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
+EOF
 ```
 ```bash
 systemctl daemon-reload
-systemctl enable telegram-reminder-bot
-systemctl start telegram-reminder-bot
+systemctl enable reminder-bot
+systemctl start reminder-bot
 ```
 Проверить статус
 ```bash
