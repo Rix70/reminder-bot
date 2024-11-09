@@ -92,7 +92,26 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 ```
-
+```bash
+systemctl daemon-reload
+systemctl enable telegram-reminder-bot
+systemctl start telegram-reminder-bot
+```
+Проверить статус
+```bash
+sudo systemctl status reminder-bot
+```
+Перезапустить
+```bash
+sudo systemctl restart reminder-bot
+```
+Остановить
+```bash
+sudo systemctl stop reminder-bot
+```
+Посмотреть логи
+sudo journalctl -u reminder-bot -f
+```
 ## 🎯 Использование
 
 После успешного запуска бота, вы можете воспользоваться следующими командами:
