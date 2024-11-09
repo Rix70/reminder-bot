@@ -75,8 +75,8 @@ After=network.target
 Type=simple
 User=$USER
 Group=$USER
-WorkingDirectory='$(pwd)'
-ExecStart='$(pwd)'/venv/bin/python3 '$(pwd)'/main.py
+WorkingDirectory=$(pwd)
+ExecStart=python3 $(pwd)/main.py
 Restart=always
 RestartSec=10
 
