@@ -43,12 +43,12 @@ async def handle_edit_callback(query, context):
     context.user_data['edit_type'] = edit_type
     
     messages = {
-        'text': "Введите новый текст напоминания:",
-        'time': "Введите новое время в формате ЧЧ:ММ:",
-        'date': "Введите новую дату в формате ДД.ММ.ГГГГ:"
+        'text': f"\nТекущий текст: _{reminder[2]}_ \n\nВведите новый текст:",
+        'time': f"\nТекущее время: _{reminder[5]}_ \n\nВведите новое время в формате ЧЧ:ММ:",
+        'date': f"\nТекущая дата: _{reminder[6]}_ \n\nВведите новую дату в формате ДД.ММ.ГГГГ:"
     }
     
-    await query.message.edit_text(messages.get(edit_type, "❌ Неизвестный тип редактирования"))
+    await query.message.edit_text(messages.get(edit_type, "❌ Неизвестный тип редактирования"), parse_mode='Markdown')
     context.user_data['last_bot_message'] = query.message.message_id
 
 async def handle_toggle_callback(query, context):
