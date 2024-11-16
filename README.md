@@ -125,6 +125,14 @@ reminder_bot/
 ├── database/
 │   ├── db.py
 │   └── db_context.py
+├── handlers/
+│   ├── callback_handlers.py
+│   ├── decorators.py
+│   ├── reminder_handlers.py
+│   ├── text_handlers.py
+│   └── utils.py
+├── keyboards/
+│   └── inline_keyboards.py
 ├── requirements.txt
 └── README.md
 ```

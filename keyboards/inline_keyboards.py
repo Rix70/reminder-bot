@@ -2,17 +2,11 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 def get_reminder_type_keyboard():
     keyboard = [
-        [
-            InlineKeyboardButton("Ежедневно", callback_data="type_daily"),
-            InlineKeyboardButton("Еженедельно", callback_data="type_weekly")
-        ],
-        [
-            InlineKeyboardButton("Ежемесячно", callback_data="type_monthly"),
-            InlineKeyboardButton("Ежегодно", callback_data="type_yearly")
-        ],
-        [
-            InlineKeyboardButton("Одноразово", callback_data="type_once")
-        ]
+        [InlineKeyboardButton("🔄 Ежедневно", callback_data="type_daily")],
+        [InlineKeyboardButton("📅 Еженедельно", callback_data="type_weekly")],
+        [InlineKeyboardButton("📆 Ежемесячно", callback_data="type_monthly")],
+        [InlineKeyboardButton("🗓 Ежегодно", callback_data="type_yearly")],
+        [InlineKeyboardButton("📌 Одноразово", callback_data="type_once")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -31,27 +25,25 @@ def get_weekdays_keyboard():
         [
             InlineKeyboardButton("Вс", callback_data="day_7")
         ],
-        [
-            InlineKeyboardButton("Готово", callback_data="days_done")
-        ]
+        [InlineKeyboardButton("✅ Готово", callback_data="days_done")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
-def get_reminder_management_keyboard(reminder_id, is_active):
+def get_reminder_management_keyboard(reminder_id: int, is_active: bool):
     keyboard = [
         [
             InlineKeyboardButton("✏️ Изменить текст", callback_data=f"edit_text_{reminder_id}"),
             InlineKeyboardButton("⏰ Изменить время", callback_data=f"edit_time_{reminder_id}")
         ],
         [
-            InlineKeyboardButton("📅 Изменить дату", callback_data=f"edit_date_{reminder_id}"),
-            InlineKeyboardButton("❌ Удалить", callback_data=f"delete_{reminder_id}")
+            InlineKeyboardButton("📅 Изменить дату", callback_data=f"edit_date_{reminder_id}")
         ],
         [
             InlineKeyboardButton(
-                "🔕 Отключить" if is_active else "🔔 Включить", 
+                "🔕 Выключить" if is_active else "🔔 Включить",
                 callback_data=f"toggle_{reminder_id}"
-            )
+            ),
+            InlineKeyboardButton("🗑 Удалить", callback_data=f"delete_{reminder_id}")
         ]
     ]
     return InlineKeyboardMarkup(keyboard) 
