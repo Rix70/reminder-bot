@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from database.db import get_all_reminders, get_active_reminders
+from database.db import get_all_reminders, get_active_reminders, get_reminders_statistics
 from keyboards.inline_keyboards import get_reminder_type_keyboard, get_reminder_management_keyboard
 from .utils import delete_message
 
@@ -81,3 +81,24 @@ def format_reminder_text(reminder):
         reminder_text += f"{emoji} {type_text}"
     
     return reminder_text
+
+async def get_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    '''Статистика напоминаний'''
+    stats = get_reminders_statistics()
+    
+    text = "*📊 Статистика напоминаний:*\n\n"
+    text += f"Всего напоминаний: {stats['total']}\n"
+    text += f"Активных: {stats['active']}\n\n"
+    
+    text += "*По типам:*\n"
+    for r_type, count in stats['by_type'].items():
+        emoji = {
+            'daily': '🔁',
+            'weekly': '📅',
+            'monthly': '📆',
+            'yearly': '🗓',
+            'once': '📌'
+        }.get(r_type, '📝')
+        text += f"{emoji} {r_type}: {count}\n"
+    
+    await update.message.reply_text(text, parse_mode='Markdown')

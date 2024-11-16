@@ -5,7 +5,7 @@ from .utils import delete_message, validate_date
 from datetime import datetime
 from keyboards.inline_keyboards import get_weekdays_keyboard, get_reminder_management_keyboard
 from .base_handlers import help_command
-from .reminder_handlers import new_reminder, list_active_reminders, list_all_reminders, format_reminder_text
+from .reminder_handlers import new_reminder, list_active_reminders, list_all_reminders, format_reminder_text, get_statistics
 import logging
 
 async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -15,6 +15,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✏️ Новое напоминание": new_reminder,
         "📄 Активные напоминания": list_active_reminders, 
         "📑 Все напоминания": list_all_reminders,
+        "📊 Статистика": get_statistics,
         "ℹ️ Помощь": help_command
     }
 

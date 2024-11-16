@@ -183,3 +183,49 @@ def cleanup_old_reminders():
     except sqlite3.Error as e:
         logging.error(f"Ошибка при очистке старых напоминаний: {e}")
         raise
+
+def get_weekly_reminders():
+    '''Получение всех активных напоминаний для еженедельного обзора'''
+    try:
+        with database_connection() as conn:
+            c = conn.cursor()
+            c.execute('''
+                SELECT * FROM reminders 
+                WHERE is_active = 1 
+                ORDER BY time, date
+            ''')
+            return c.fetchall()
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка при получении еженедельных напоминаний: {e}")
+        raise
+    
+def get_reminders_statistics():
+    '''Получение статистики напоминаний'''
+    try:
+        with database_connection() as conn:
+            c = conn.cursor()
+            
+            # Общее количество
+            c.execute('SELECT COUNT(*) FROM reminders')
+            total = c.fetchone()[0]
+            
+            # Активные
+            c.execute('SELECT COUNT(*) FROM reminders WHERE is_active = 1')
+            active = c.fetchone()[0]
+            
+            # По типам
+            c.execute('''
+                SELECT reminder_type, COUNT(*) 
+                FROM reminders 
+                GROUP BY reminder_type
+            ''')
+            by_type = dict(c.fetchall())
+            
+            return {
+                'total': total,
+                'active': active,
+                'by_type': by_type
+            }
+    except sqlite3.Error as e:
+        logging.error(f"Ошибка при получении статистики: {e}")
+        raise

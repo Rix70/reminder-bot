@@ -3,16 +3,18 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from telegram import BotCommand
 from handlers import (
     start, help_command, new_reminder, list_active_reminders, list_all_reminders,
-    button_callback, handle_text_input, check_owner
+    button_callback, handle_text_input, check_owner, get_statistics
 )
-from database.db import init_db, get_active_reminders, update_last_reminded, cleanup_old_reminders
-from config import TELEGRAM_TOKEN, validate_config
-from datetime import datetime, time
+from database.db import init_db, get_active_reminders, update_last_reminded, cleanup_old_reminders, get_weekly_reminders
+from config import TELEGRAM_TOKEN, OWNER_ID, validate_config
+from datetime import datetime, time, timedelta
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+# Отключаем логи от httpx
+logging.getLogger('httpx').setLevel(logging.WARNING)
 
 async def setup_commands(application: Application):
     commands = [
@@ -20,6 +22,7 @@ async def setup_commands(application: Application):
         BotCommand("new", "Создать новое напоминание"),
         BotCommand("list_active", "Показать активные напоминания"),
         BotCommand("list_all", "Показать все напоминания"),
+        BotCommand("stats", "Показать статистику напоминаний"),
         BotCommand("help", "Показать помощь")
     ]
     await application.bot.set_my_commands(commands)
@@ -79,6 +82,109 @@ async def cleanup_job(context):
     except Exception as e:
         logging.error(f"Ошибка при выполнении очистки: {e}")
 
+async def send_weekly_summary(context):
+    """Отправляет обзор напоминаний на следующую неделю"""
+    now = datetime.now()
+    print("Checking weekly summary")
+    if now.weekday() != 5:  # Воскресенье
+        return
+        
+    try:
+        reminders = get_weekly_reminders()
+        if not reminders:
+            return
+            
+        # Определяем даты следующей недели
+        next_week_start = (now + timedelta(days=1)).date()
+        next_week_end = (now + timedelta(days=7)).date()
+        
+        # Группируем напоминания по типам
+        summary = "📅 *События на следующую неделю:*\n"
+        summary += f"*{next_week_start.strftime('%d.%m')} - {next_week_end.strftime('%d.%m')}*\n\n"
+        
+        type_headers = {
+            'daily': '🔁 *Ежедневные:*',
+            'weekly': '📅 *Еженедельные:*',
+            'monthly': '📆 *Ежемесячные:*',
+            'yearly': '🗓 *Ежегодные:*',
+            'once': '📌 *Одноразовые:*'
+        }
+        
+        grouped_reminders = {}
+        for reminder in reminders:
+            r_type = reminder[3]  # reminder_type
+            r_date = reminder[6]  # date
+            
+            # Проверяем, подходит ли напоминание для следующей недели
+            should_include = False
+            
+            if r_type == 'daily':
+                should_include = True
+            elif r_type == 'weekly':
+                # Проверяем, есть ли дни недели в следующей неделе
+                days = reminder[4].split(',')  # days_of_week
+                should_include = bool(days)
+            elif r_type == 'monthly':
+                # Проверяем, попадает ли день месяца на следующую неделю
+                if r_date:
+                    r_day = int(r_date[8:10])
+                    for d in range(8):
+                        check_date = next_week_start + timedelta(days=d)
+                        if check_date.day == r_day:
+                            should_include = True
+                            break
+            elif r_type == 'yearly' and r_date:
+                # Проверяем, попадает ли дата на следующую неделю
+                r_date = datetime.strptime(r_date, '%Y-%m-%d').date()
+                next_occurrence = r_date.replace(year=now.year)
+                if next_occurrence < now.date():
+                    next_occurrence = next_occurrence.replace(year=now.year + 1)
+                should_include = next_week_start <= next_occurrence <= next_week_end
+            elif r_type == 'once' and r_date:
+                # Включаем только если дата в следующей неделе
+                r_date = datetime.strptime(r_date, '%Y-%m-%d').date()
+                should_include = next_week_start <= r_date <= next_week_end
+            
+            if should_include:
+                if r_type not in grouped_reminders:
+                    grouped_reminders[r_type] = []
+                grouped_reminders[r_type].append(reminder)
+        
+        # Если нет напоминаний на следующую неделю, не отправляем сообщение
+        if not grouped_reminders:
+            return
+        
+        # Формируем текст для каждого типа напоминаний
+        for r_type, reminders in grouped_reminders.items():
+            if reminders:
+                summary += f"\n{type_headers.get(r_type, '📝 *Другие:*')}\n"
+                for reminder in reminders:
+                    text = reminder[2]  # text
+                    time = reminder[5]  # time
+                    date = reminder[6]  # date
+                    
+                    if r_type == 'weekly':
+                        days = reminder[4].split(',')  # days_of_week
+                        days_text = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                        days = [days_text[int(d)-1] for d in days]
+                        summary += f"• {text} ⏰ {time} ({', '.join(days)})\n"
+                    elif r_type in ['monthly', 'yearly', 'once'] and date:
+                        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+                        date_str = date_obj.strftime('%d.%m')
+                        summary += f"• {text} ⏰ {time} 📅 {date_str}\n"
+                    else:
+                        summary += f"• {text} ⏰ {time}\n"
+        
+        # Отправляем сообщение владельцу
+        await context.bot.send_message(
+            chat_id=OWNER_ID,
+            text=summary,
+            parse_mode='Markdown'
+        )
+        
+    except Exception as e:
+        logging.error(f"Ошибка при отправке еженедельного обзора: {e}")
+
 def main():
     try:
         # Проверка конфигурации
@@ -99,14 +205,15 @@ def main():
         application.add_handler(CommandHandler("new", check_owner(new_reminder)))
         application.add_handler(CommandHandler("list_active", check_owner(list_active_reminders)))
         application.add_handler(CommandHandler("list_all", check_owner(list_all_reminders)))
+        application.add_handler(CommandHandler("statistics", check_owner(get_statistics)))
         application.add_handler(CallbackQueryHandler(check_owner(button_callback)))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_owner(handle_text_input)))
         
         # Настройка проверки напоминаний через job_queue
         job_queue = application.job_queue
-        job_queue.run_repeating(check_reminders, interval=60, first=1)
-        job_queue.run_daily(cleanup_job, time=time(hour=0, minute=0))
-        
+        job_queue.run_repeating(check_reminders, interval=60, first=1) # проверка напоминаний каждые 60 секунд
+        job_queue.run_daily(cleanup_job, time=time(hour=0, minute=0)) # очистка старых напоминаний ежедневный в 00:00
+        job_queue.run_daily(send_weekly_summary, time=time(hour=9, minute=0),  days=(6,))    # еженедельный обзор Каждое воскресенье в 9:00
         # Запуск бота
         application.run_polling()
         

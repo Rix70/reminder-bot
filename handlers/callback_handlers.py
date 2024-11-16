@@ -1,7 +1,8 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database.db import get_reminder_by_id, toggle_reminder, delete_reminder
 from keyboards.inline_keyboards import get_weekdays_keyboard, get_reminder_management_keyboard
+import logging
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -13,7 +14,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'toggle_': handle_toggle_callback,
         'day_': handle_day_callback,
         'days_done': handle_days_done_callback,
-        'delete_': handle_delete_callback
+        'delete_': handle_delete_callback,
+        'cancel_': handle_cancel_callback
     }
     
     for prefix, handler in handlers.items():
@@ -33,7 +35,7 @@ async def handle_edit_callback(query, context):
     '''Обработчик для редактирования напоминания'''
     _, edit_type, reminder_id = query.data.split("_")
     reminder = get_reminder_by_id(int(reminder_id))
-        
+    print(query.data)
     if not reminder:
         await query.message.edit_text("❌ Напоминание не найдено!")
         return
@@ -48,18 +50,39 @@ async def handle_edit_callback(query, context):
         'date': f"\nТекущая дата: _{reminder[6]}_ \n\nВведите новую дату в формате ДД.ММ.ГГГГ:"
     }
     
-    await query.message.edit_text(messages.get(edit_type, "❌ Неизвестный тип редактирования"), parse_mode='Markdown')
+    keyboard = [[InlineKeyboardButton("❌ Отмена", callback_data=f"cancel_{reminder_id}")]]
+    
+    await query.message.edit_text(
+        messages.get(edit_type, "❌ Неизвестный тип редактирования"), 
+        parse_mode='Markdown',
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
     context.user_data['last_bot_message'] = query.message.message_id
 
 async def handle_toggle_callback(query, context):
     '''Обработчик для переключения статуса напоминания'''
-    reminder_id = int(query.data.split("_")[1])
-    new_status = toggle_reminder(reminder_id)
-    status_text = "включено" if new_status else "отключено"
-    await query.message.edit_text(
-            f"Напоминание {status_text}!",
-        reply_markup=get_reminder_management_keyboard(reminder_id, new_status)
-    )
+    from .reminder_handlers import format_reminder_text
+
+    try:
+        reminder_id = int(query.data.split("_")[1])
+        
+        new_status = toggle_reminder(reminder_id)
+        reminder = get_reminder_by_id(reminder_id)
+        status_text = "включено ✅" if new_status else "отключено 🔕"
+        text = f"**Напоминание {status_text}**\n\n{format_reminder_text(reminder)}"
+        
+        await query.message.edit_text(
+            text,
+            parse_mode='Markdown',
+            reply_markup=get_reminder_management_keyboard(reminder_id, new_status)
+        )
+        
+    except (ValueError, IndexError):
+        logging.error(f"Ошибка при обработке callback данных: {query.data}")
+        await query.message.edit_text("❌ Произошла ошибка при обработке запроса")
+    except Exception as e:
+        logging.error(f"Неожиданная ошибка в handle_toggle_callback: {e}")
+        await query.message.edit_text("❌ Произошла непредвиденная ошибка")
 
 async def handle_day_callback(query, context):
     '''Обработчик для выбора дней недели'''
@@ -102,3 +125,20 @@ async def handle_delete_callback(query, context):
     reminder_id = int(query.data.split("_")[1])
     delete_reminder(reminder_id)
     await query.message.edit_text("Напоминание удалено!")
+
+async def handle_cancel_callback(query, context):
+    '''Обработчик для отмены редактирования'''
+    reminder_id = int(query.data.split("_")[1])
+    reminder = get_reminder_by_id(reminder_id)
+    
+    if reminder:
+        from .reminder_handlers import format_reminder_text
+        reminder_text = format_reminder_text(reminder)
+        await query.message.edit_text(
+            reminder_text,
+            reply_markup=get_reminder_management_keyboard(reminder_id, reminder[7])
+        )
+    else:
+        await query.message.edit_text("❌ Напоминание не найдено!")
+    
+    context.user_data.clear()

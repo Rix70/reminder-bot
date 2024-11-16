@@ -1,7 +1,7 @@
 from .base_handlers import start, help_command
 from .reminder_handlers import new_reminder, list_active_reminders, list_all_reminders
 from .callback_handlers import button_callback
-from .text_handlers import handle_text_input
+from .text_handlers import handle_text_input, get_statistics
 from .decorators import check_owner
 
 __all__ = [
@@ -12,5 +12,6 @@ __all__ = [
     'list_all_reminders',
     'button_callback',
     'handle_text_input',
-    'check_owner'
+    'check_owner',
+    'get_statistics'
 ] 
