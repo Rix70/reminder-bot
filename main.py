@@ -45,7 +45,7 @@ async def check_reminders(context):
     for reminder in reminders:
         reminder_id, user_id, text, reminder_type, days_of_week, time, date, is_active, last_reminded = reminder
         
-        logging.info(f"Checking reminder {reminder_id}: time={time}, current_time={current_time}")
+        #logging.info(f"Checking reminder {reminder_id}: time={time}, current_time={current_time}")
         
         if time != current_time:
             continue
