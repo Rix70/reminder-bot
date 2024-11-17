@@ -45,7 +45,7 @@ async def check_reminders(context):
     for reminder in reminders:
         reminder_id, user_id, text, reminder_type, days_of_week, time, date, is_active, last_reminded = reminder
         
-        logging.info(f"Checking reminder {reminder_id}: time={time}, current_time={current_time}")
+        logging.info(f"Checking reminder {reminder_id}{text}: time={time}, current_time={current_time}")
         
         if time != current_time:
             continue
@@ -55,10 +55,10 @@ async def check_reminders(context):
         # Определяем необходимость отправки напоминания в зависимости от типа
         should_remind = {
             'daily': True,
-            'weekly': bool(days_of_week and weekday in days_of_week.split(',')),
-            'monthly': current_date[8:] == date[8:],
-            'yearly': current_date[5:] == date[5:],
-            'once': current_date == date
+            'weekly': bool(days_of_week is not None and weekday in (days_of_week.split(',') if days_of_week else [])),
+            'monthly': bool(date is not None and current_date[8:] == date[8:]),
+            'yearly': bool(date is not None and current_date[5:] == date[5:]), 
+            'once': bool(date is not None and current_date == date)
         }.get(reminder_type, False)
         
         logging.info(f"Should remind: {should_remind}, last_reminded: {last_reminded}")
@@ -67,8 +67,8 @@ async def check_reminders(context):
             try:
                 await context.bot.send_message(
                     chat_id=user_id,
-                    text=f"🔔 Напоминание:\n{text}",
-                    parse_mode='HTML'
+                    text=f"🔔 *Напоминание:*\n\n{text}",
+                    parse_mode='Markdown'
                 )
                 update_last_reminded(reminder_id) # Обновляем дату последнего напоминания
                 logging.info(f"Reminder {reminder_id} sent successfully")
@@ -86,7 +86,7 @@ async def send_weekly_summary(context):
     """Отправляет обзор напоминаний на следующую неделю"""
     now = datetime.now()
     print("Checking weekly summary")
-    if now.weekday() != 5:  # Воскресенье
+    if now.weekday() != 6:  # Воскресенье
         return
         
     try:
@@ -213,7 +213,7 @@ def main():
         job_queue = application.job_queue
         job_queue.run_repeating(check_reminders, interval=60, first=1) # проверка напоминаний каждые 60 секунд
         job_queue.run_daily(cleanup_job, time=time(hour=0, minute=0)) # очистка старых напоминаний ежедневный в 00:00
-        job_queue.run_daily(send_weekly_summary, time=time(hour=9, minute=0),  days=(6,))    # еженедельный обзор Каждое воскресенье в 9:00
+        job_queue.run_daily(send_weekly_summary, time=time(hour=6, minute=15),  days=(0,))    # еженедельный обзор Каждое воскресенье в 9:00
         # Запуск бота
         application.run_polling()
         

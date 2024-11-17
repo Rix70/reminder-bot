@@ -35,7 +35,7 @@ async def handle_edit_callback(query, context):
     '''Обработчик для редактирования напоминания'''
     _, edit_type, reminder_id = query.data.split("_")
     reminder = get_reminder_by_id(int(reminder_id))
-    print(query.data)
+
     if not reminder:
         await query.message.edit_text("❌ Напоминание не найдено!")
         return
@@ -69,7 +69,7 @@ async def handle_toggle_callback(query, context):
         new_status = toggle_reminder(reminder_id)
         reminder = get_reminder_by_id(reminder_id)
         status_text = "включено ✅" if new_status else "отключено 🔕"
-        text = f"**Напоминание {status_text}**\n\n{format_reminder_text(reminder)}"
+        text = f"*Напоминание {status_text}*\n\n{format_reminder_text(reminder)}"
         
         await query.message.edit_text(
             text,
