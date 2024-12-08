@@ -53,21 +53,35 @@ async def check_reminders(context):
         should_remind = False
         
         # Определяем необходимость отправки напоминания в зависимости от типа
-        should_remind = {
-            'daily': True,
-            'weekly': bool(days_of_week is not None and weekday in (days_of_week.split(',') if days_of_week else [])),
-            'monthly': bool(date is not None and current_date[8:] == date[8:]),
-            'yearly': bool(date is not None and current_date[5:] == date[5:]), 
-            'once': bool(date is not None and current_date == date)
-        }.get(reminder_type, False)
+        if reminder_type == 'birthday' and date:
+            birth_date = datetime.strptime(date, '%Y-%m-%d')
+            today = now.date()
+            # Проверяем, совпадает ли день и месяц
+            should_remind = (birth_date.day == today.day and birth_date.month == today.month)
+        else:
+            should_remind = {
+                'daily': True,
+                'weekly': bool(days_of_week and weekday in days_of_week.split(',')),
+                'monthly': bool(date and current_date[8:] == date[8:]),
+                'yearly': bool(date and current_date[5:] == date[5:]), 
+                'once': bool(date and current_date == date)
+            }.get(reminder_type, False)
         
         logging.info(f"Should remind: {should_remind}, last_reminded: {last_reminded}")
         
         if should_remind and last_reminded != current_date:
             try:
+                # Для дней рождения добавляем возраст в текст напоминания
+                if reminder_type == 'birthday' and date:
+                    birth_date = datetime.strptime(date, '%Y-%m-%d')
+                    age = now.year - birth_date.year - ((now.month, now.day) < (birth_date.month, birth_date.day))
+                    reminder_text = f"🎂 *День рождения*:\n\n{text}\nВозраст: {age} лет"
+                else:
+                    reminder_text = f"🔔 *Напоминание*:\n\n{text}"
+                
                 await context.bot.send_message(
                     chat_id=user_id,
-                    text=f"🔔 *Напоминание:*\n\n{text}",
+                    text=reminder_text,
                     parse_mode='Markdown'
                 )
                 update_last_reminded(reminder_id) # Обновляем дату последнего напоминания
@@ -107,6 +121,7 @@ async def send_weekly_summary(context):
             'weekly': '📅 *Еженедельные:*',
             'monthly': '📆 *Ежемесячные:*',
             'yearly': '🗓 *Ежегодные:*',
+            'birthday': '🎂 *Дни рождения:*',
             'once': '📌 *Одноразовые:*'
         }
         

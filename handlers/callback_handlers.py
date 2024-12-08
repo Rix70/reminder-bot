@@ -15,7 +15,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'day_': handle_day_callback,
         'days_done': handle_days_done_callback,
         'delete_': handle_delete_callback,
-        'cancel_': handle_cancel_callback
+        'cancel_': handle_cancel_callback,
+        'page_': handle_page_callback
     }
     
     for prefix, handler in handlers.items():
@@ -142,3 +143,16 @@ async def handle_cancel_callback(query, context):
         await query.message.edit_text("❌ Напоминание не найдено!")
     
     context.user_data.clear()
+
+async def handle_page_callback(query, context):
+    '''Обработчик для переключения страниц'''
+    try:
+        page = int(query.data.split('_')[1])
+        reminders = context.user_data.get('current_reminders')
+        
+        if reminders:
+            from .reminder_handlers import show_reminders_page
+            await show_reminders_page(query, context, reminders, page, "")
+    except (ValueError, IndexError) as e:
+        logging.error(f"Error handling page callback: {e}")
+        await query.message.edit_text("Произошла ошибка при переключении страницы")

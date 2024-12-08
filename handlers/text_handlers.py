@@ -5,7 +5,7 @@ from .utils import delete_message, validate_date
 from datetime import datetime
 from keyboards.inline_keyboards import get_weekdays_keyboard, get_reminder_management_keyboard
 from .base_handlers import help_command
-from .reminder_handlers import new_reminder, list_active_reminders, list_all_reminders, format_reminder_text, get_statistics
+from .reminder_handlers import new_reminder, list_active_reminders, list_all_reminders, format_reminder_text, get_statistics, send_weekly_summary
 import logging
 
 async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -16,6 +16,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📄 Активные напоминания": list_active_reminders, 
         "📑 Все напоминания": list_all_reminders,
         "📊 Статистика": get_statistics,
+        "📅 На неделю": send_weekly_summary,
         "ℹ️ Помощь": help_command
     }
 
@@ -77,7 +78,7 @@ async def process_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 context.user_data.clear()
                 
         else:
-            waiting_for=context.user_data['waiting_for']
+            waiting_for = context.user_data['waiting_for']
             if waiting_for == 'text':
                 context.user_data['text'] = text
                 
@@ -96,7 +97,7 @@ async def process_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     time_str = time.strftime('%H:%M')
                     context.user_data['time'] = time_str
                     
-                    if context.user_data['reminder_type'] in ['once', 'monthly', 'yearly']:
+                    if context.user_data['reminder_type'] in ['once', 'monthly', 'yearly', 'birthday']:
                         message = await update.message.reply_text(
                             "Введите дату в формате ДД.ММ.ГГГГ:"
                         )

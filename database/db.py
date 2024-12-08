@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from .db_context import database_connection
 
@@ -39,7 +39,7 @@ def add_reminder(user_id, text, reminder_type, days_of_week=None, time=None, dat
                 (user_id, text, reminder_type, days_of_week, time, date, is_active, last_reminded)
                 VALUES (?, ?, ?, ?, ?, ?, 1, ?)
             ''', (user_id, text, reminder_type, days_of_week, time, date, 
-                  datetime.now().strftime('%Y-%m-%d')))
+                  (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')))   # Дата последнего напоминания - вчера
             
             reminder_id = c.lastrowid
             conn.commit()
