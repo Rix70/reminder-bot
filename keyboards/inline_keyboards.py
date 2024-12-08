@@ -78,3 +78,13 @@ def get_reminder_management_keyboard(reminder_id: int, is_active: bool):
         ]
     ]
     return InlineKeyboardMarkup(keyboard) 
+
+def get_create_reminder_keyboard():
+    """Создает клавиатуру с подтверждением создания напоминания"""
+    keyboard = [
+        [
+            InlineKeyboardButton("✅ Да", callback_data="create_reminder_yes"),
+            InlineKeyboardButton("❌ Нет", callback_data="create_reminder_no")
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard) 

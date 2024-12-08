@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database.db import get_reminder_by_id, toggle_reminder, delete_reminder
-from keyboards.inline_keyboards import get_weekdays_keyboard, get_reminder_management_keyboard
+from keyboards.inline_keyboards import get_weekdays_keyboard, get_reminder_management_keyboard, get_reminder_type_keyboard
 import logging
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -16,7 +16,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'days_done': handle_days_done_callback,
         'delete_': handle_delete_callback,
         'cancel_': handle_cancel_callback,
-        'page_': handle_page_callback
+        'page_': handle_page_callback,
+        'create_reminder_': handle_create_reminder_callback
     }
     
     for prefix, handler in handlers.items():
@@ -28,8 +29,21 @@ async def handle_type_callback(query, context):
     '''Обработчик для выбора типа напоминания'''
     reminder_type = query.data.split("_")[1]
     context.user_data['reminder_type'] = reminder_type
-    await query.message.edit_text("Введите текст напоминания:")
-    context.user_data['waiting_for'] = 'text'
+    
+    # Если текст уже есть, переходим к следующему шагу
+    if 'text' in context.user_data:
+        if reminder_type == 'weekly':
+            await query.message.edit_text(
+                "Выберите дни недели:",
+                reply_markup=get_weekdays_keyboard()
+            )
+        else:
+            await query.message.edit_text("Введите время в формате ЧЧ:ММ")
+            context.user_data['waiting_for'] = 'time'
+    else:
+        await query.message.edit_text("Введите текст напоминания:")
+        context.user_data['waiting_for'] = 'text'
+    
     context.user_data['last_bot_message'] = query.message.message_id
 
 async def handle_edit_callback(query, context):
@@ -156,3 +170,22 @@ async def handle_page_callback(query, context):
     except (ValueError, IndexError) as e:
         logging.error(f"Error handling page callback: {e}")
         await query.message.edit_text("Произошла ошибка при переключении страницы")
+
+async def handle_create_reminder_callback(query, context):
+    """Обработчик ответа на предложение создать напоминание"""
+    action = query.data.split('_')[-1]
+    
+    if action == 'yes':
+        # Сохраняем текст и начинаем процесс создания
+        text = context.user_data.pop('temp_text', '')
+        context.user_data['text'] = text
+        context.user_data['waiting_for'] = 'time'  # Устанавливаем следующий шаг
+        
+        await query.message.edit_text(
+            "Выберите тип напоминания:",
+            reply_markup=get_reminder_type_keyboard()
+        )
+    else:
+        # Просто удаляем сообщение с предложением
+        await query.message.delete()
+        context.user_data.pop('temp_text', None)

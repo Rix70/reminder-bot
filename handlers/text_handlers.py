@@ -3,13 +3,18 @@ from telegram.ext import ContextTypes
 from database.db import add_reminder, update_reminder, get_reminder_by_id
 from .utils import delete_message, validate_date
 from datetime import datetime
-from keyboards.inline_keyboards import get_weekdays_keyboard, get_reminder_management_keyboard
+from keyboards.inline_keyboards import get_weekdays_keyboard, get_reminder_management_keyboard, get_create_reminder_keyboard
 from .base_handlers import help_command
 from .reminder_handlers import new_reminder, list_active_reminders, list_all_reminders, format_reminder_text, get_statistics, send_weekly_summary
 import logging
 
 async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
+
+    # Проверяем, не находимся ли мы в процессе создания/редактирования
+    if 'waiting_for' in context.user_data or 'edit_type' in context.user_data:
+        await process_text_input(update, context)
+        return
 
     menu_commands = {
         "✏️ Новое напоминание": new_reminder,
@@ -24,7 +29,13 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await menu_commands[text](update, context)
         return
 
-    await process_text_input(update, context)
+    # Предлагаем создать напоминание
+    message = await update.message.reply_text(
+        "Создать напоминание с этим текстом?",
+        reply_markup=get_create_reminder_keyboard()
+    )
+    context.user_data['temp_text'] = text
+    context.user_data['last_bot_message'] = message.message_id
 
 async def process_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if 'waiting_for' not in context.user_data and 'edit_type' not in context.user_data:
